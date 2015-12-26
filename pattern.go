@@ -1,7 +1,6 @@
 package goose
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 )
@@ -34,7 +33,7 @@ func NewPattern(pattern string) *Pattern {
 	// Match {something} patterns only for PARAM_PATTERN
 	if regexp.MustCompile("^\\{[^\\{\\}:]+\\}$").MatchString(pattern) {
 		if patternLen < 3 {
-			panic(fmt.Sprintf("`%s` pattern is not valid!", pattern))
+			panic("`" + pattern + "` pattern is not valid!")
 		}
 		var wildcard string
 		if isOptionalPattern(pattern) {
@@ -70,7 +69,7 @@ func (self *Pattern) compilePattern(pattern string) {
 				parts := strings.Split(wildcard, ":")
 
 				if len(parts) > 2 {
-					panic(fmt.Sprintf("`%s` contains more than 1 modifier (:) in `%s` pattern.", wildcard, pattern))
+					panic("`" + wildcard + "` contains more than 1 modifier (:) in `" + pattern + "` pattern.")
 				}
 
 				if len(parts) > 1 {
@@ -90,7 +89,7 @@ func (self *Pattern) compilePattern(pattern string) {
 				continue
 			}
 			if pattern[i] == '}' {
-				panic(fmt.Sprintf("`%s` pattern is invalid and cannot be compiled!", pattern))
+				panic("`" + pattern + "` pattern is invalid and cannot be compiled!")
 			}
 		}
 		i++
@@ -124,7 +123,6 @@ func (self *Pattern) match(against string) (bool, Params) {
 			}
 			return true, params
 		}
-		fmt.Println(parts, self.regex.SubexpNames())
 	case PARAM_PATTERN:
 		return true, map[string]string{self.wildcards[0]: against}
 	}
