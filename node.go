@@ -57,7 +57,6 @@ func (self *Pattern) match(against string) (bool, Params) {
 		}
 	case PARAM_PATTERN:
 		return true, map[string]string{self.wildcards[0]: against}
-		break
 	}
 
 	return false, nil
