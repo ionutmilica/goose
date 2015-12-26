@@ -7,11 +7,11 @@ import (
 func TestStaticPath(t *testing.T) {
 	tree := NewNode()
 
-	tree.Insert("", "root")
-	tree.Insert("/users/profile/info", "/users/profile/info")
-	tree.Insert("/users/profile", "users/profile")
-	tree.Insert("/users/test", "users/test")
-	tree.Insert("/user", "user")
+	tree.Insert("", nil)
+	tree.Insert("/users/profile/info", nil)
+	tree.Insert("/users/profile", nil)
+	tree.Insert("/users/test", nil)
+	tree.Insert("/user", nil)
 	if node, _ := tree.Search(""); node == nil {
 		t.Error("Cannot find root node with empty space")
 	}
@@ -39,9 +39,9 @@ func TestStaticPath(t *testing.T) {
 
 func TestParams(t *testing.T) {
 	tree := NewNode()
-	tree.Insert("users/{id}", "user_id")
-	tree.Insert("users/profile/{user}", "test_dsa")
-	tree.Insert("some/{more}/{even}", "some_more_even")
+	tree.Insert("users/{id}", nil)
+	tree.Insert("users/profile/{user}", nil)
+	tree.Insert("some/{more}/{even}", nil)
 
 	node, params := tree.Search("users/10")
 	if node == nil {
@@ -71,8 +71,8 @@ func TestParams(t *testing.T) {
 
 func TestOptionalParameter(t *testing.T) {
 	tree := NewNode()
-	tree.Insert("users/{id?}", "user_id")
-	tree.Insert("users/profile/{user}", "test_dsa")
+	tree.Insert("users/{id?}", nil)
+	tree.Insert("users/profile/{user}", nil)
 
 	node, params := tree.Search("users")
 
@@ -93,7 +93,7 @@ func TestOptionalParameter(t *testing.T) {
 
 func TestRegexParameters(t *testing.T) {
 	tree := NewNode()
-	tree.Insert("post/{title}-{id}", "post/{title}-{id}")
+	tree.Insert("post/{title}-{id}", nil)
 
 	node, params := tree.Search("post/somepost-12312")
 

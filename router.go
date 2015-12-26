@@ -2,6 +2,7 @@ package goose
 
 import (
 	"fmt"
+	"net/http"
 )
 
 var METHODS = map[string]bool{
@@ -14,7 +15,7 @@ var METHODS = map[string]bool{
 	"DELETE":  true,
 }
 
-type Handler interface{}
+type Handler func(res http.ResponseWriter, req *http.Request, params Params)
 
 type Group struct {
 	pattern string
@@ -67,11 +68,24 @@ func (self *Router) register(method, pattern string, handler Handler) {
 	}
 
 	tree := self.trees[method]
-	tree.Add(pattern, handler)
+	tree.Insert(pattern, handler)
 }
 
 func (self *Router) Group(pattern string, cb func(*Router)) {
-	self.groups = append(self.groups, Group{pattern, cb})
+	self.groups = append(self.groups, Group{pattern, nil})
 	cb(self)
 	self.groups = self.groups[:len(self.groups)-1]
+}
+
+// Just for some tests
+func (self *Router) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	if root := self.trees[req.Method]; root != nil {
+		path := req.URL.Path
+
+		if node, params := root.Search(path); node != nil {
+			node.handler(res, req, params)
+			return
+		}
+	}
+	fmt.Fprintln(res, "<h1>Page not found!</h2>")
 }

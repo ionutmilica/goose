@@ -8,9 +8,13 @@ func NewTrie() *Trie {
 	return &Trie{}
 }
 
-func (self *Trie) Add(pattern string, handler Handler) {
+func (self *Trie) Insert(pattern string, handler Handler) *Node {
 	if self.root == nil {
 		self.root = NewNode()
 	}
-	self.root.Insert(pattern, handler)
+	return self.root.Insert(pattern, handler)
+}
+
+func (self *Trie) Search(pattern string) (*Node, Params) {
+	return self.root.Search(pattern)
 }
