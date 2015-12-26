@@ -31,3 +31,18 @@ func TestOnlyParamPattern(t *testing.T) {
 		}
 	}
 }
+
+func TestRegexPatternWithOnlyParam(t *testing.T) {
+	tests := map[string]string{
+		"d{user}":      "^d(?P<user>.+)$",
+		"{title}-{id}": "^(?P<title>.+)-(?P<id>.+)$",
+		"{id:\\d+}":    "^(?P<id>\\d+)$",
+	}
+
+	for key, val := range tests {
+		pattern := NewPattern(key)
+		if pattern.compiled != val {
+			t.Errorf("`%s` pattern was not compiled to `%s` but to `%s`!", key, val, pattern.compiled)
+		}
+	}
+}

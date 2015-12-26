@@ -90,3 +90,22 @@ func TestOptionalParameter(t *testing.T) {
 		t.Error("{id} not populated despite we had users/10 and users/{id?} pattern")
 	}
 }
+
+func TestRegexParameters(t *testing.T) {
+	tree := NewNode()
+	tree.Insert("post/{title}-{id}", "post/{title}-{id}")
+
+	node, params := tree.Search("post/somepost-12312")
+
+	if node == nil {
+		t.Error("`post/somepost-12312` was not matched by `post/{title}-{id}` pattern!")
+	}
+
+	if val, ok := params["title"]; !ok || val != "somepost" {
+		t.Error("Param `title` was not found or not equal with `somepost`!")
+	}
+	if val, ok := params["id"]; !ok || val != "12312" {
+		t.Error("Param `id` was not found or not equal with `12312`!")
+	}
+
+}

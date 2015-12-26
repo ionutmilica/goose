@@ -39,7 +39,6 @@ func (self *Node) Insert(pattern string, handler Handler) *Node {
 	pattern = strings.Trim(pattern, "/")
 	segments := strings.Split(pattern, "/")
 
-	// Add node as terminal
 	var newNode *Node
 	for _, n := range self.children {
 		if ok, _ := n.pattern.match(segments[0]); ok {
@@ -55,7 +54,7 @@ func (self *Node) Insert(pattern string, handler Handler) *Node {
 	}
 
 	if len(segments) == 1 {
-		// Add handler to the node parent is the node is optional
+		// Add handler to the parrent node if the current node is optional
 		if newNode.pattern.kind == PARAM_PATTERN && isOptionalPattern(segments[0]) {
 			if self.hasHandler {
 				panic(fmt.Sprintf("`%s` node already has a handler and can't be combined with an optiona segment!", self))

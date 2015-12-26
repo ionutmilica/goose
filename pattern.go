@@ -3,6 +3,7 @@ package goose
 import (
 	"fmt"
 	"regexp"
+	"strings"
 )
 
 const (
@@ -15,7 +16,7 @@ const (
 type Pattern struct {
 	raw       string
 	compiled  string
-	regex     regexp.Regexp
+	regex     *regexp.Regexp
 	kind      int8
 	wildcards []string
 }
@@ -30,7 +31,8 @@ func NewPattern(pattern string) *Pattern {
 
 	patternLen := len(pattern)
 
-	if pattern[0] == '{' && pattern[patternLen-1] == '}' {
+	// Match {something} patterns only for PARAM_PATTERN
+	if regexp.MustCompile("^\\{[^\\{\\}:]+\\}$").MatchString(pattern) {
 		if patternLen < 3 {
 			panic(fmt.Sprintf("`%s` pattern is not valid!", pattern))
 		}
@@ -46,7 +48,62 @@ func NewPattern(pattern string) *Pattern {
 		return patternObj
 	}
 
+	patternObj.compilePattern(pattern)
+
 	return patternObj
+}
+
+//Fugly method for compiling params groups into regex
+//@todo: Optimize for memory and speed, also deal with unicode characters
+func (self *Pattern) compilePattern(pattern string) {
+	wildcards := make(map[string]string)
+	i := 0
+	inWildcard := false
+	start := 0
+
+	for i < len(pattern) {
+		if inWildcard {
+			if pattern[i] == '}' {
+				inWildcard = false
+				wildcard := pattern[start+1 : i]
+
+				parts := strings.Split(wildcard, ":")
+
+				if len(parts) > 2 {
+					panic(fmt.Sprintf("`%s` contains more than 1 modifier (:) in `%s` pattern.", wildcard, pattern))
+				}
+
+				if len(parts) > 1 {
+					wildcards["{"+wildcard+"}"] = "(?P<" + parts[0] + ">" + parts[1] + ")"
+				} else {
+					wildcards["{"+wildcard+"}"] = "(?P<" + parts[0] + ">.+)"
+				}
+
+				i++
+				continue
+			}
+		} else {
+			if pattern[i] == '{' {
+				inWildcard = true
+				start = i
+				i++
+				continue
+			}
+			if pattern[i] == '}' {
+				panic(fmt.Sprintf("`%s` pattern is invalid and cannot be compiled!", pattern))
+			}
+		}
+		i++
+	}
+	for _old, _new := range wildcards {
+		pattern = strings.Replace(pattern, _old, _new, -1)
+	}
+
+	if self.raw != pattern {
+		self.kind = REGEX_PATTERN
+		self.compiled = "^" + pattern + "$"
+		self.regex = regexp.MustCompile(self.compiled)
+	}
 }
 
 func (self *Pattern) match(against string) (bool, Params) {
@@ -55,6 +112,19 @@ func (self *Pattern) match(against string) (bool, Params) {
 		if against == self.raw {
 			return true, nil
 		}
+	case REGEX_PATTERN:
+		parts := self.regex.FindStringSubmatch(against)
+		if len(parts) > 0 {
+			params := make(map[string]string, len(parts)-1)
+			for i, name := range self.regex.SubexpNames() {
+				if i == 0 {
+					continue
+				}
+				params[name] = parts[i]
+			}
+			return true, params
+		}
+		fmt.Println(parts, self.regex.SubexpNames())
 	case PARAM_PATTERN:
 		return true, map[string]string{self.wildcards[0]: against}
 	}
