@@ -68,3 +68,25 @@ func TestParams(t *testing.T) {
 	}
 
 }
+
+func TestOptionalParameter(t *testing.T) {
+	tree := NewNode()
+	tree.Insert("users/{id?}", "user_id")
+	tree.Insert("users/profile/{user}", "test_dsa")
+
+	node, params := tree.Search("users")
+
+	if node == nil {
+		t.Error("No results found for `users` although we have an optional parameter")
+	}
+
+	node, params = tree.Search("users/10")
+
+	if node == nil {
+		t.Error("No results found for `users/10`")
+	}
+
+	if _, ok := params["id"]; !ok {
+		t.Error("{id} not populated despite we had users/10 and users/{id?} pattern")
+	}
+}

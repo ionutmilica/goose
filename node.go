@@ -1,6 +1,7 @@
 package goose
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -54,6 +55,13 @@ func (self *Node) Insert(pattern string, handler Handler) *Node {
 	}
 
 	if len(segments) == 1 {
+		// Add handler to the node parent is the node is optional
+		if newNode.pattern.kind == PARAM_PATTERN && isOptionalPattern(segments[0]) {
+			if self.hasHandler {
+				panic(fmt.Sprintf("`%s` node already has a handler and can't be combined with an optiona segment!", self))
+			}
+			self.Insert("", handler)
+		}
 		return newNode.Insert("", handler)
 	}
 

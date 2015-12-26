@@ -1,6 +1,7 @@
 package goose
 
 import (
+	"fmt"
 	"regexp"
 )
 
@@ -23,16 +24,27 @@ func NewPattern(pattern string) *Pattern {
 	patternObj := &Pattern{}
 	patternObj.wildcards = make([]string, 0)
 	patternObj.raw = pattern
+	patternObj.kind = STATIC_PATTERN
 
 	// Prepare the pattern
 
-	if pattern[0] == '{' && pattern[len(pattern)-1] == '}' {
+	patternLen := len(pattern)
+
+	if pattern[0] == '{' && pattern[patternLen-1] == '}' {
+		if patternLen < 3 {
+			panic(fmt.Sprintf("`%s` pattern is not valid!", pattern))
+		}
+		var wildcard string
+		if isOptionalPattern(pattern) {
+			wildcard = pattern[1 : patternLen-2]
+		} else {
+			wildcard = pattern[1 : patternLen-1]
+		}
+
 		patternObj.kind = PARAM_PATTERN
-		patternObj.wildcards = append(patternObj.wildcards, pattern[1:len(pattern)-1])
+		patternObj.wildcards = append(patternObj.wildcards, wildcard)
 		return patternObj
 	}
-
-	patternObj.kind = STATIC_PATTERN
 
 	return patternObj
 }
@@ -55,4 +67,11 @@ func appendMap(dst, src map[string]string) map[string]string {
 		dst[k] = v
 	}
 	return dst
+}
+
+func isOptionalPattern(pattern string) bool {
+	if len(pattern) > 2 && pattern[len(pattern)-2] == '?' {
+		return true
+	}
+	return false
 }
