@@ -16,7 +16,34 @@ func (self *Trie) Insert(pattern string, handler Handler) *Node {
 	if self.root == nil {
 		self.root = NewNode("/")
 	}
-	return self.root.Insert(pattern, handler)
+
+	currentNode := self.root
+	segments := splitIntoSegments(pattern)
+	i := 0
+
+	for i < len(segments) {
+		// Current segment was already added in the tree, so we pass
+		if node := currentNode.inChildren(segments[i]); node != nil {
+			currentNode = node
+		} else {
+			// We should create the new node and insert it by priority
+			newNode := NewNode(segments[i])
+			newNode.parent = currentNode
+			currentNode.insertChildren(newNode)
+			currentNode = newNode
+		}
+		i++
+	}
+
+	if currentNode.pattern.kind == PARAM_PATTERN && isOptionalPattern(segments[i-1]) {
+		if currentNode.parent.hasHandler {
+			panic(fmt.Sprintf("`%s` node already has a handler and can't be combined with an optiona segment!", self))
+		}
+		currentNode.parent.setHandler(handler)
+	}
+	currentNode.setHandler(handler)
+
+	return currentNode
 }
 
 func (self *Trie) Search(pattern string) (*Node, Params) {
@@ -45,8 +72,6 @@ func (self *Trie) Search(pattern string) (*Node, Params) {
 func (self *Trie) Dump() {
 	groups := map[string]string{}
 	walk(self.root, groups)
-
-	fmt.Println(self.root.children)
 
 	format := `graph Router {
 %s

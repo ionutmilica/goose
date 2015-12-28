@@ -1,9 +1,5 @@
 package goose
 
-import (
-	"fmt"
-)
-
 type Params map[string]string
 
 type Node struct {
@@ -32,45 +28,25 @@ func (self *Node) setHandler(handler Handler) {
 	self.hasHandler = true
 }
 
-// Naive implementation without optimization toughts
-// Will be revised when when is completed
-func (self *Node) insert(segments []string, handler Handler) *Node {
-	if len(segments) == 0 {
-		self.setHandler(handler)
-		return self
+func (self Node) inChildren(pattern string) *Node {
+	for _, child := range self.children {
+		if child.pattern.raw == pattern {
+			return child
+		}
 	}
+	return nil
+}
 
-	var newNode *Node
-	for _, n := range self.children {
-		if n.pattern.raw == segments[0] {
-			//if n.pattern.match(segments[0], make(Params, 0)) {
-			newNode = n
+func (self *Node) insertChildren(node *Node) {
+	i := 0
+	for ; i < len(self.children); i++ {
+		if node.pattern.kind < self.children[i].pattern.kind {
 			break
 		}
 	}
-
-	if newNode == nil {
-		newNode = NewNode(segments[0])
-		newNode.parent = self
-		self.children = append(self.children, newNode)
+	if i == len(node.children) {
+		self.children = append(self.children, node)
+	} else {
+		self.children = append(self.children[:i], append([]*Node{node}, self.children[i:]...)...)
 	}
-
-	if len(segments) == 1 {
-		// Add handler to the parrent node if the current node is optional
-		if newNode.pattern.kind == PARAM_PATTERN && isOptionalPattern(segments[0]) {
-			if self.hasHandler {
-				panic(fmt.Sprintf("`%s` node already has a handler and can't be combined with an optiona segment!", self))
-			}
-			self.setHandler(handler)
-		}
-		newNode.setHandler(handler)
-
-		return newNode
-	}
-
-	return newNode.insert(segments[1:], handler)
-}
-
-func (self *Node) Insert(pattern string, handler Handler) *Node {
-	return self.insert(splitIntoSegments(pattern), handler)
 }
