@@ -2,6 +2,7 @@ package goose
 
 import (
 	"fmt"
+	"strings"
 )
 
 type Trie struct {
@@ -18,24 +19,24 @@ func (self *Trie) Insert(pattern string, handler Handler) *Node {
 	}
 
 	currentNode := self.root
-	segments := splitIntoSegments(pattern)
-	i := 0
 
-	for i < len(segments) {
+	for _, segment := range strings.Split(pattern, "/") {
+		if segment == "" {
+			continue
+		}
 		// Current segment was already added in the tree, so we pass
-		if node := currentNode.inChildren(segments[i]); node != nil {
+		if node := currentNode.inChildren(segment); node != nil {
 			currentNode = node
 		} else {
 			// We should create the new node and insert it by priority
-			newNode := NewNode(segments[i])
+			newNode := NewNode(segment)
 			newNode.parent = currentNode
 			currentNode.insertChildren(newNode)
 			currentNode = newNode
 		}
-		i++
 	}
 
-	if currentNode.pattern.kind == PARAM_PATTERN && isOptionalPattern(segments[i-1]) {
+	if currentNode.pattern.kind == PARAM_PATTERN && currentNode.pattern.isOptional {
 		if currentNode.parent.hasHandler {
 			panic(fmt.Sprintf("`%s` node already has a handler and can't be combined with an optiona segment!", self))
 		}
@@ -48,18 +49,17 @@ func (self *Trie) Insert(pattern string, handler Handler) *Node {
 
 func (self *Trie) Search(pattern string) (*Node, Params) {
 	params := make(Params, 0)
-	segments := splitIntoSegments(pattern)
 	currentNode := self.root
-	numSegments := len(segments)
-	i := 0
 
-	for i < numSegments {
+	for _, segment := range strings.Split(pattern, "/") {
+		if segment == "" {
+			continue
+		}
 		for _, child := range currentNode.children {
-			if child.pattern.match(segments[i], params) {
+			if child.pattern.match(segment, params) {
 				currentNode = child
 			}
 		}
-		i++
 	}
 
 	if currentNode.hasHandler {

@@ -1,7 +1,6 @@
 package goose
 
 import (
-	"bytes"
 	"regexp"
 	"strings"
 )
@@ -14,11 +13,12 @@ const (
 )
 
 type Pattern struct {
-	raw       string
-	compiled  string
-	regex     *regexp.Regexp
-	kind      int8
-	wildcards []string
+	raw        string
+	compiled   string
+	regex      *regexp.Regexp
+	kind       int8
+	wildcards  []string
+	isOptional bool
 }
 
 func NewPattern(pattern string) *Pattern {
@@ -38,7 +38,9 @@ func NewPattern(pattern string) *Pattern {
 		}
 		backwords := 1
 
-		if isOptionalPattern(pattern) {
+		// Check if it's optional
+		if len(pattern) > 2 && pattern[len(pattern)-2] == '?' {
+			patternObj.isOptional = true
 			backwords = 2
 		}
 
@@ -129,34 +131,3 @@ func (self *Pattern) match(against string, params Params) bool {
 
 	return false
 }
-
-func isOptionalPattern(pattern string) bool {
-	if len(pattern) > 2 && pattern[len(pattern)-2] == '?' {
-		return true
-	}
-	return false
-}
-
-func splitIntoSegments(pattern string) []string {
-	pattern = strings.Trim(pattern, "/")
-	segments := make([]string, 0)
-	buffer := bytes.NewBuffer([]byte{})
-	i := 0
-
-	for i < len(pattern) {
-		if pattern[i] == '/' {
-			segments = append(segments, buffer.String())
-			buffer.Reset()
-		} else if len(pattern)-1 == i {
-			buffer.WriteByte(pattern[i])
-			segments = append(segments, buffer.String())
-		} else {
-			buffer.WriteByte(pattern[i])
-		}
-		i++
-	}
-	return segments
-}
-
-//  /users/{user}/profile
-//  user/{user}/profile//
