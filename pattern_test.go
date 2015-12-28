@@ -46,3 +46,11 @@ func TestRegexPatternWithOnlyParam(t *testing.T) {
 		}
 	}
 }
+
+func TestSplitIntoSegments(t *testing.T) {
+	segments := splitIntoSegments("/users/{user}/profile")
+
+	if len(segments) != 3 {
+		t.Error("SplitIntoSegments failed for /users/{user}/profile")
+	}
+}

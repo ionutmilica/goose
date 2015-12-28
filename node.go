@@ -2,7 +2,6 @@ package goose
 
 import (
 	"fmt"
-	"strings"
 )
 
 type Params map[string]string
@@ -15,10 +14,11 @@ type Node struct {
 	children   []*Node
 }
 
-func NewNode() *Node {
+func NewNode(pattern string) *Node {
 	node := &Node{}
 	node.hasHandler = false
 	node.children = make([]*Node, 0)
+	node.pattern = NewPattern(pattern)
 
 	return node
 }
@@ -27,28 +27,30 @@ func (self *Node) String() string {
 	return self.pattern.raw
 }
 
+func (self *Node) setHandler(handler Handler) {
+	self.handler = handler
+	self.hasHandler = true
+}
+
 // Naive implementation without optimization toughts
 // Will be revised when when is completed
-func (self *Node) Insert(pattern string, handler Handler) *Node {
-	if pattern == "" || pattern == "/" {
-		self.handler = handler
-		self.hasHandler = true
+func (self *Node) insert(segments []string, handler Handler) *Node {
+	if len(segments) == 0 {
+		self.setHandler(handler)
 		return self
 	}
 
-	pattern = strings.Trim(pattern, "/")
-	segments := strings.Split(pattern, "/")
-
 	var newNode *Node
 	for _, n := range self.children {
-		if ok, _ := n.pattern.match(segments[0]); ok {
+		if n.pattern.raw == segments[0] {
+			//if n.pattern.match(segments[0], make(Params, 0)) {
 			newNode = n
+			break
 		}
 	}
 
 	if newNode == nil {
-		newNode = NewNode()
-		newNode.pattern = NewPattern(segments[0])
+		newNode = NewNode(segments[0])
 		newNode.parent = self
 		self.children = append(self.children, newNode)
 	}
@@ -59,40 +61,16 @@ func (self *Node) Insert(pattern string, handler Handler) *Node {
 			if self.hasHandler {
 				panic(fmt.Sprintf("`%s` node already has a handler and can't be combined with an optiona segment!", self))
 			}
-			self.Insert("", handler)
+			self.setHandler(handler)
 		}
-		return newNode.Insert("", handler)
+		newNode.setHandler(handler)
+
+		return newNode
 	}
 
-	pattern = strings.Join(segments[1:], "/")
-	return newNode.Insert(pattern, handler)
+	return newNode.insert(segments[1:], handler)
 }
 
-func (self *Node) Search(pattern string) (*Node, Params) {
-	params := make(Params)
-	if pattern == "" || pattern == "/" {
-		if self.hasHandler {
-			return self, params
-		}
-		return nil, params
-	}
-
-	pattern = strings.Trim(pattern, "/")
-	segments := strings.Split(pattern, "/")
-
-	numSegments := len(segments)
-
-	for _, node := range self.children {
-		if ok, newParams := node.pattern.match(segments[0]); ok {
-			params = appendMap(params, newParams)
-			if numSegments == 1 && node.hasHandler {
-				return node, params
-			}
-			pattern := strings.Join(segments[1:], "/")
-			node, newParams := node.Search(pattern)
-			return node, appendMap(params, newParams)
-		}
-	}
-
-	return nil, params
+func (self *Node) Insert(pattern string, handler Handler) *Node {
+	return self.insert(splitIntoSegments(pattern), handler)
 }

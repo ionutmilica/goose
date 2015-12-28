@@ -5,7 +5,7 @@ import (
 )
 
 func TestStaticPath(t *testing.T) {
-	tree := NewNode()
+	tree := NewTrie()
 
 	tree.Insert("", nil)
 	tree.Insert("/users/profile/info", nil)
@@ -38,7 +38,7 @@ func TestStaticPath(t *testing.T) {
 }
 
 func TestParams(t *testing.T) {
-	tree := NewNode()
+	tree := NewTrie()
 	tree.Insert("users/{id}", nil)
 	tree.Insert("users/profile/{user}", nil)
 	tree.Insert("some/{more}/{even}", nil)
@@ -66,11 +66,10 @@ func TestParams(t *testing.T) {
 	if _, ok := params["even"]; !ok {
 		t.Error("{even} not found in match for some/{more}/{even}")
 	}
-
 }
 
 func TestOptionalParameter(t *testing.T) {
-	tree := NewNode()
+	tree := NewTrie()
 	tree.Insert("users/{id?}", nil)
 	tree.Insert("users/profile/{user}", nil)
 
@@ -92,7 +91,7 @@ func TestOptionalParameter(t *testing.T) {
 }
 
 func TestRegexParameters(t *testing.T) {
-	tree := NewNode()
+	tree := NewTrie()
 	tree.Insert("post/{title}-{id}", nil)
 
 	node, params := tree.Search("post/somepost-12312")
@@ -108,4 +107,20 @@ func TestRegexParameters(t *testing.T) {
 		t.Error("Param `id` was not found or not equal with `12312`!")
 	}
 
+}
+
+func BenchmarkTweenty(b *testing.B) {
+	route := "/{a}/{b}/{c}/{d}/{e}/{f}/{g}/{h}/{i}/{j}/{k}/{l}/{m}/{n}/{o}/{p}/{q}/{r}/{s}/{t}"
+
+	tree := NewTrie()
+	tree.Insert(route, nil)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		if node, _ := tree.Search("/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t"); node != nil {
+
+		}
+	}
 }

@@ -1,6 +1,7 @@
 package goose
 
 import (
+	"bytes"
 	"regexp"
 	"strings"
 )
@@ -35,15 +36,15 @@ func NewPattern(pattern string) *Pattern {
 		if patternLen < 3 {
 			panic("`" + pattern + "` pattern is not valid!")
 		}
-		var wildcard string
+		backwords := 1
+
 		if isOptionalPattern(pattern) {
-			wildcard = pattern[1 : patternLen-2]
-		} else {
-			wildcard = pattern[1 : patternLen-1]
+			backwords = 2
 		}
 
 		patternObj.kind = PARAM_PATTERN
-		patternObj.wildcards = append(patternObj.wildcards, wildcard)
+		patternObj.wildcards = append(patternObj.wildcards, pattern[1:patternLen-backwords])
+
 		return patternObj
 	}
 
@@ -59,7 +60,6 @@ func (self *Pattern) compilePattern(pattern string) {
 	i := 0
 	inWildcard := false
 	start := 0
-
 	for i < len(pattern) {
 		if inWildcard {
 			if pattern[i] == '}' {
@@ -105,36 +105,29 @@ func (self *Pattern) compilePattern(pattern string) {
 	}
 }
 
-func (self *Pattern) match(against string) (bool, Params) {
+func (self *Pattern) match(against string, params Params) bool {
 	switch self.kind {
 	case STATIC_PATTERN:
 		if against == self.raw {
-			return true, nil
+			return true
 		}
 	case REGEX_PATTERN:
 		parts := self.regex.FindStringSubmatch(against)
 		if len(parts) > 0 {
-			params := make(map[string]string, len(parts)-1)
 			for i, name := range self.regex.SubexpNames() {
 				if i == 0 {
 					continue
 				}
 				params[name] = parts[i]
 			}
-			return true, params
+			return true
 		}
 	case PARAM_PATTERN:
-		return true, map[string]string{self.wildcards[0]: against}
+		params[self.wildcards[0]] = against
+		return true
 	}
 
-	return false, nil
-}
-
-func appendMap(dst, src map[string]string) map[string]string {
-	for k, v := range src {
-		dst[k] = v
-	}
-	return dst
+	return false
 }
 
 func isOptionalPattern(pattern string) bool {
@@ -143,3 +136,27 @@ func isOptionalPattern(pattern string) bool {
 	}
 	return false
 }
+
+func splitIntoSegments(pattern string) []string {
+	pattern = strings.Trim(pattern, "/")
+	segments := make([]string, 0)
+	buffer := bytes.NewBuffer([]byte{})
+	i := 0
+
+	for i < len(pattern) {
+		if pattern[i] == '/' {
+			segments = append(segments, buffer.String())
+			buffer.Reset()
+		} else if len(pattern)-1 == i {
+			buffer.WriteByte(pattern[i])
+			segments = append(segments, buffer.String())
+		} else {
+			buffer.WriteByte(pattern[i])
+		}
+		i++
+	}
+	return segments
+}
+
+//  /users/{user}/profile
+//  user/{user}/profile//
