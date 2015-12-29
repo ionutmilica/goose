@@ -6,10 +6,10 @@ import (
 )
 
 const (
-	STATIC_PATTERN = iota
-	REGEX_PATTERN
-	PARAM_PATTERN
-	WILDCARD_PATTERN
+	STATIC_PATTERN   = 0
+	REGEX_PATTERN    = 1
+	PARAM_PATTERN    = 2
+	WILDCARD_PATTERN = 3
 )
 
 type Pattern struct {
@@ -26,8 +26,6 @@ func NewPattern(pattern string) *Pattern {
 	patternObj.wildcards = make([]string, 0)
 	patternObj.raw = pattern
 	patternObj.kind = STATIC_PATTERN
-
-	// Prepare the pattern
 
 	patternLen := len(pattern)
 
@@ -107,6 +105,8 @@ func (self *Pattern) compilePattern(pattern string) {
 	}
 }
 
+// Match the current pattern against a url segment
+// It returns a boolean and appends the matched params to the second parameter
 func (self *Pattern) match(against string, params Params) bool {
 	switch self.kind {
 	case STATIC_PATTERN:
