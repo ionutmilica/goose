@@ -22,53 +22,96 @@ type Group struct {
 	handler Handler
 }
 
-type Router struct {
-	groups []Group
-	trees  map[string]*Trie
+type Route struct {
+	router *Router
+	node   *Node
 }
 
+func (self *Route) Name(name string) *Route {
+	if _, ok := self.router.nameRoutes[name]; ok {
+		panic(fmt.Sprintf("Route named `%s` already exists!", name))
+	}
+
+	self.router.nameRoutes[name] = self
+
+	return self
+}
+
+func (self *Route) Midleware(name string) *Route {
+	// Not implemented
+	return self
+}
+
+type Router struct {
+	groups     []Group
+	trees      map[string]*Trie
+	nameRoutes map[string]*Route
+}
+
+// Creates the router struct
 func NewRouter() *Router {
 	return &Router{
-		groups: make([]Group, 0),
-		trees:  make(map[string]*Trie),
+		groups:     make([]Group, 0),
+		trees:      make(map[string]*Trie),
+		nameRoutes: make(map[string]*Route),
 	}
 }
 
-func (self *Router) Get(pattern string, handler Handler) {
-	self.register("GET", pattern, handler)
+// Creates a route for GET request
+func (self *Router) Get(pattern string, handler Handler) *Route {
+	return self.Handle("GET", pattern, handler)
 }
 
-func (self *Router) Post(pattern string, handler Handler) {
-	self.register("POST", pattern, handler)
+func (self *Router) Head(pattern string, handler Handler) *Route {
+	return self.Handle("HEAD", pattern, handler)
 }
 
-func (self *Router) Put(pattern string, handler Handler) {
-	self.register("PUT", pattern, handler)
+// Creates a route for POST request
+func (self *Router) Post(pattern string, handler Handler) *Route {
+	return self.Handle("POST", pattern, handler)
 }
 
-func (self *Router) Patch(pattern string, handler Handler) {
-	self.register("PATCH", pattern, handler)
+func (self *Router) Put(pattern string, handler Handler) *Route {
+	return self.Handle("PUT", pattern, handler)
 }
 
-func (self *Router) Delete(pattern string, handler Handler) {
-	self.register("DELETE", pattern, handler)
+func (self *Router) Patch(pattern string, handler Handler) *Route {
+	return self.Handle("PATCH", pattern, handler)
 }
 
-func (self *Router) Any(pattern string, handler Handler) {
-	self.register("*", pattern, handler)
+func (self *Router) Delete(pattern string, handler Handler) *Route {
+	return self.Handle("DELETE", pattern, handler)
 }
 
-func (self *Router) register(method, pattern string, handler Handler) {
+func (self *Router) Options(pattern string, handler Handler) *Route {
+	return self.Handle("OPTIONS", pattern, handler)
+}
+
+func (self *Router) Any(pattern string, handler Handler) *Route {
+	return self.Handle("*", pattern, handler)
+}
+
+// Creates a route for a specific request method
+func (self *Router) Handle(method, pattern string, handler Handler) *Route {
+	methods := make(map[string]bool)
+
+	if method == "*" {
+		for m, _ := range METHODS {
+			methods[m] = true
+		}
+	} else {
+		methods[method] = true
+	}
+
 	if _, ok := METHODS[method]; !ok {
-		panic(fmt.Sprintf("Method %s is not valid!", method))
+		panic("Unknown Http Method: " + method)
 	}
 
-	if _, ok := self.trees[method]; !ok {
-		self.trees[method] = NewTrie()
+	for m, _ := range methods {
+		self.alloc(m)
 	}
 
-	tree := self.trees[method]
-	tree.Insert(pattern, handler)
+	return &Route{self, self.trees[method].Insert(pattern, handler)}
 }
 
 func (self *Router) Group(pattern string, cb func(*Router)) {
@@ -88,4 +131,12 @@ func (self *Router) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 	fmt.Fprintln(res, "<h1>Page not found!</h2>")
+}
+
+// Private methods
+
+func (self *Router) alloc(method string) {
+	if _, ok := self.trees[method]; !ok {
+		self.trees[method] = NewTrie()
+	}
 }
